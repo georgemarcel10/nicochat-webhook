@@ -27,6 +27,8 @@ def index():
 @app.route('/webhook/nicochat', methods=['POST'])
 def webhook():
     auth_header = request.headers.get('Authorization')
+    print(f"Header recebido: [{auth_header}]")
+    print(f"Header esperado: [Bearer {API_SECRET}]")
     if auth_header != f"Bearer {API_SECRET}":
         return jsonify({"error": "Unauthorized"}), 401
 
