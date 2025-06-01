@@ -26,18 +26,23 @@ def index():
 @app.route('/webhook/nicochat', methods=['POST'])
 def webhook():
     try:
-        data = request.get_json()
-        print("📥 Recebido:", data)
+        # Apenas para log: mostra o header, mas não processa
+        auth_header = request.headers.get('Authorization')
+        print("🔑 Header Authorization recebido:", auth_header)
 
-        # Teste de verificação (NicoChat espera por um retorno simples)
+        # Captura os dados JSON
+        data = request.get_json()
+        print("📥 Dados recebidos:", data)
+
+        # Se for apenas um teste de verificação (sem dados), responde OK
         if not data:
             return jsonify({"status": "ok"})
 
-        # Insere no Supabase
+        # Salva no Supabase
         response = supabase.table("nome_da_sua_tabela").insert(data).execute()
-        print("✅ Dados inseridos no Supabase:", response)
+        print("✅ Dados armazenados no Supabase:", response)
 
-        return jsonify({"status": "success", "message": "Dados recebidos e armazenados com sucesso."})
+        return jsonify({"status": "success", "message": "Dados processados e armazenados."})
     except Exception as e:
         print("❌ Erro:", str(e))
         return jsonify({"status": "error", "message": str(e)}), 500
