@@ -1,52 +1,51 @@
-from flask import Flask, request, jsonify, make_response
+import json
+from flask import Flask, request, jsonify
 from supabase import create_client, Client
 import os
-import json
 from datetime import datetime
 
 app = Flask(__name__)
 
-# Variáveis de ambiente
+# Variáveis de ambiente (configure no Render)
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+API_SECRET = os.getenv("API_SECRET")  # Vamos criar essa variável para validar o token
 
-@app.before_request
-def sanitize_headers():
-    # Remove o header Authorization se ele causar erro
-    if 'Authorization' in request.headers:
-        auth = request.headers.get('Authorization')
-        if not auth.startswith('Bearer '):
-            request.headers.environ.pop('HTTP_AUTHORIZATION', None)
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @app.route('/')
 def index():
     return jsonify({
-        "status": "✅ Webhook NicoChat ULTRA + Supabase ATIVO!",
+        "status": "✅ Webhook NicoChat ULTRA ~ Supabase ATIVO!",
         "version": "3.0 - Captura TOTAL + Atualização Progressiva",
         "features": [
-            "📥 Captura TODOS os dados disponíveis",
-            "🔄 Atualização progressiva do mesmo lead",
-            "📝 Histórico completo de mudanças"
+            "📌 Captura TODOS os dados disponíveis",
+            "📌 Atualização progressiva do mesmo lead",
+            "📌 Histórico completo de mudanças"
         ]
     })
 
 @app.route('/webhook/nicochat', methods=['POST'])
 def webhook():
-    try:
-        # Captura o JSON recebido
-        data = request.get_json()
-        print("📥 Dados recebidos:", json.dumps(data, indent=2))
+    # 1️⃣ Verificar o cabeçalho Authorization
+    auth_header = request.headers.get('Authorization', '')
+    expected_token = f"Bearer {API_SECRET}"
 
-        if not data:
-            return jsonify({"status": "ok", "message": "Nenhum dado recebido."})
+    if auth_header != expected_token:
+        return jsonify({"error": "Unauthorized"}), 401
 
-        # Insere no Supabase
-        response = supabase.table("nome_da_sua_tabela").insert(data).execute()
-        print("✅ Dados inseridos no Supabase:", response)
+    # 2️⃣ Receber e processar o webhook
+    data = request.json
+    print("Webhook recebido:", data)
 
-        return jsonify({"status": "success", "message": "Dados armazenados com sucesso."})
+    # Aqui você pode salvar no Supabase, processar, etc.
+    # Por exemplo, salvar a data da requisição
+    supabase.table("webhook_logs").insert({
+        "timestamp": datetime.utcnow().isoformat(),
+        "data": json.dumps(data)
+    }).execute()
 
-    except Exception as e:
-        print("❌ Erro:", str(e))
-        return jsonify({"status": "error", "message": str(e)}), 500
+    return jsonify({"status": "sucesso", "mensagem": "Webhook recebido e processado!"}), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
