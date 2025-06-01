@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from supabase import create_client, Client
 import os
 import json
@@ -10,6 +10,14 @@ app = Flask(__name__)
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+@app.before_request
+def sanitize_headers():
+    # Remove o header Authorization se ele causar erro
+    if 'Authorization' in request.headers:
+        auth = request.headers.get('Authorization')
+        if not auth.startswith('Bearer '):
+            request.headers.environ.pop('HTTP_AUTHORIZATION', None)
 
 @app.route('/')
 def index():
@@ -26,15 +34,7 @@ def index():
 @app.route('/webhook/nicochat', methods=['POST'])
 def webhook():
     try:
-        # Captura o header Authorization (se vier)
-        auth_header = request.headers.get('Authorization', None)
-        print("🔑 Header recebido:", auth_header)
-
-        # (Opcional) Valide se o header começa com 'Bearer'
-        if auth_header and not auth_header.startswith("Bearer "):
-            return jsonify({"status": "error", "message": "Header Authorization inválido."}), 400
-
-        # Processa o JSON recebido
+        # Captura o JSON recebido
         data = request.get_json()
         print("📥 Dados recebidos:", json.dumps(data, indent=2))
 
