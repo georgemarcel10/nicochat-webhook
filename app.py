@@ -6,46 +6,43 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# Variáveis de ambiente (configure no Render)
+# Variáveis de ambiente (Render)
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-API_SECRET = os.getenv("API_SECRET")  # Vamos criar essa variável para validar o token
+API_SECRET = os.getenv("API_SECRET")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @app.route('/')
 def index():
     return jsonify({
-        "status": "✅ Webhook NicoChat ULTRA ~ Supabase ATIVO!",
-        "version": "3.0 - Captura TOTAL + Atualização Progressiva",
+        "status": "🚀 Webhook NicoChat ULTRA ~ Supabase ATIVO!",
+        "version": "3.0 - Captura TOTAL + Validação de Autorização",
         "features": [
-            "📌 Captura TODOS os dados disponíveis",
-            "📌 Atualização progressiva do mesmo lead",
-            "📌 Histórico completo de mudanças"
+            "Validação de Authorization Header",
+            "Captura e armazenamento no Supabase",
+            "Atualização progressiva do mesmo lead",
+            "Histórico completo de mudanças"
         ]
     })
 
 @app.route('/webhook/nicochat', methods=['POST'])
 def webhook():
-    # 1️⃣ Verificar o cabeçalho Authorization
-    auth_header = request.headers.get('Authorization', '')
-    expected_token = f"Bearer {API_SECRET}"
+    # Valida o Authorization Header
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or auth_header != f"Bearer {API_SECRET}":
+        return jsonify({"error": "Unauthorized. Invalid or missing API_SECRET."}), 401
 
-    if auth_header != expected_token:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    # 2️⃣ Receber e processar o webhook
+    # Processa o payload recebido
     data = request.json
-    print("Webhook recebido:", data)
+    print(f"Webhook recebido: {json.dumps(data)}")
 
-    # Aqui você pode salvar no Supabase, processar, etc.
-    # Por exemplo, salvar a data da requisição
-    supabase.table("webhook_logs").insert({
-        "timestamp": datetime.utcnow().isoformat(),
-        "data": json.dumps(data)
-    }).execute()
-
-    return jsonify({"status": "sucesso", "mensagem": "Webhook recebido e processado!"}), 200
+    # Aqui você pode ajustar como salvar no Supabase, exemplo simples:
+    try:
+        response = supabase.table("leads").insert(data).execute()
+        return jsonify({"status": "success", "data": response.data}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
